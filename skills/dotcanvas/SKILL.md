@@ -12,10 +12,11 @@ Use this skill when the user wants to plan, decompose, or revise a research pape
 1. Resolve the active paper repository root from the workspace context.
 2. Use `<paper-root>/.canvas` as the canonical path.
 3. Read that file if it exists. If it does not exist, initialize it from the standard section scaffold in `panel/app.js`.
-4. Open `panel/index.html` in the Codex interactive panel and pass the JSON document with the `canvas:init` message.
-5. Listen for `canvas:save` messages, validate the JSON, and atomically write the payload to `<paper-root>/.canvas`.
+4. Start `node <plugin-root>/scripts/serve.js --root <paper-root> --port 38473`. It binds to `127.0.0.1` and serves the panel with a validated, atomic `.canvas` save API. Keep it running while the user edits.
+5. Open `http://127.0.0.1:38473` in a browser tab. When the Codex task runs on an SSH host, forward that host's port 38473 to the desktop's loopback interface before opening the URL. Never open a remote `file://` path in the desktop browser.
+6. Verify the panel loads the repository's existing `.canvas` and that the browser shows no load error. Do not report the canvas as open until the browser tab renders.
 
-The panel uses this host bridge:
+The panel can also use an injected host bridge:
 
 ```ts
 interface CanvasHost {
@@ -27,10 +28,9 @@ interface CanvasHost {
 ```
 
 The bridge may be implemented by the Codex host through `postMessage`, or injected as
-`window.canvasHost`. The panel has a local preview fallback, but the skill must use the
-repository bridge for normal operation. Writes should be debounced and performed through a
-temporary sibling file followed by replacement so a malformed update cannot destroy the last
-valid canvas.
+`window.canvasHost`. The local HTTP bridge is the default for Codex file and SSH tasks.
+The panel has a preview fallback when no bridge is available. The HTTP bridge validates
+each save and writes through a temporary sibling file followed by replacement.
 
 ## File contract
 

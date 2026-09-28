@@ -7,6 +7,7 @@ DotCanvas is a dependency-free Codex plugin for planning a paper as connected ca
 - `.codex-plugin/plugin.json` — plugin metadata.
 - `skills/dotcanvas/SKILL.md` — Codex launch and filesystem bridge contract.
 - `panel/` — bundled static panel (`index.html`, `styles.css`, `app.js`).
+- `scripts/serve.js` — localhost panel and atomic `.canvas` file bridge.
 - `src/model.js` — validation, seed, and serialization helpers.
 - `tests/model.test.js` — model tests.
 
@@ -18,7 +19,15 @@ No dependencies are required. Run the model tests with:
 node --test tests/model.test.js
 ```
 
-Open `panel/index.html` directly for a local preview. The preview keeps edits in memory and emits `canvas:save` messages. A Codex host should inject `window.canvasHost` or handle those messages and atomically write the supplied contents to the repository's `.canvas` path.
+For an editable canvas, run:
+
+```sh
+node scripts/serve.js --root /path/to/paper-repository --port 38473
+```
+
+Open `http://127.0.0.1:38473` on that machine. If the repository is on an SSH host, forward its port 38473 to the desktop's loopback interface and open the forwarded URL. The server binds only to loopback, validates each canvas, and atomically writes `<paper-repository>/.canvas`.
+
+Open `panel/index.html` directly for a preview without file saving. A Codex host may also inject `window.canvasHost` or handle `canvas:save` messages.
 
 ## Canvas contract
 
