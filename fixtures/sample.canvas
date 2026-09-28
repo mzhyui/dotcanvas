@@ -1,0 +1,8 @@
+{
+  "nodes": [
+    {"id":"node-1","type":"text","x":80,"y":80,"width":280,"height":190,"color":"1","text":"# Introduction\n\nFrame the research problem and contribution.","section":"Introduction","status":"draft","path":"paper.tex","anchor":"sec:intro"},
+    {"id":"node-2","type":"text","x":410,"y":80,"width":280,"height":190,"color":"2","text":"# Method\n\nDescribe the proposed approach.","section":"Method","status":"draft","path":"paper.tex","anchor":"sec:method"}
+  ],
+  "edges": [{"id":"edge-1","fromNode":"node-1","toNode":"node-2","fromSide":"right","toSide":"left","label":"supports"}],
+  "metadata": {"research-canvas": {"version": 1}}
+}

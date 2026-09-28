@@ -1,0 +1,24 @@
+{
+  "name": "research-canvas",
+  "version": "0.1.0",
+  "description": "A lightweight paper-planning canvas for Codex repositories.",
+  "author": { "name": "mzhyui" },
+  "license": "MIT",
+  "keywords": ["research", "paper", "canvas", "writing", "outline"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Research Canvas",
+    "shortDescription": "Plan papers with connected cards",
+    "longDescription": "Open a paper repository canvas, arrange section cards, connect ideas, and save the plan as .canvas JSON.",
+    "developerName": "mzhyui",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write", "Interactive"],
+    "defaultPrompt": [
+      "Open a research canvas for this paper repository",
+      "Help me decompose this paper into connected section cards"
+    ],
+    "brandColor": "#2563eb",
+    "composerIcon": "./panel/icon.svg",
+    "logo": "./panel/icon.svg"
+  }
+}
