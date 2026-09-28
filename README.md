@@ -1,11 +1,11 @@
-# Research Canvas
+# DotCanvas
 
-Research Canvas is a dependency-free Codex plugin for planning a paper as connected cards. It stores one Obsidian-compatible JSON canvas at `<paper-repository>/.canvas`.
+DotCanvas is a dependency-free Codex plugin for planning a paper as connected cards. It stores one Obsidian-compatible JSON canvas at `<paper-repository>/.canvas`.
 
 ## Contents
 
 - `.codex-plugin/plugin.json` — plugin metadata.
-- `skills/research-canvas/SKILL.md` — Codex launch and filesystem bridge contract.
+- `skills/dotcanvas/SKILL.md` — Codex launch and filesystem bridge contract.
 - `panel/` — bundled static panel (`index.html`, `styles.css`, `app.js`).
 - `src/model.js` — validation, seed, and serialization helpers.
 - `tests/model.test.js` — model tests.
@@ -22,7 +22,7 @@ Open `panel/index.html` directly for a local preview. The preview keeps edits in
 
 ## Canvas contract
 
-Nodes use the Obsidian Canvas fields `id`, `type`, `x`, `y`, `width`, `height`, `color`, and `text`; edges use `id`, `fromNode`, `toNode`, `fromSide`, `toSide`, and optional `label`. Research Canvas adds optional `section`, `status`, `path`, and `anchor` fields to nodes. Unknown fields are retained by the panel unless a host-side validator removes them.
+Nodes use the Obsidian Canvas fields `id`, `type`, `x`, `y`, `width`, `height`, `color`, and `text`; edges use `id`, `fromNode`, `toNode`, `fromSide`, `toSide`, and optional `label`. DotCanvas adds optional `section`, `status`, `path`, and `anchor` fields to nodes. Unknown fields are retained by the panel unless a host-side validator removes them.
 
 ## Controls
 

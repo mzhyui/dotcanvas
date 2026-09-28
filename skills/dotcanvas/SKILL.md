@@ -1,9 +1,9 @@
 ---
-name: research-canvas
+name: dotcanvas
 description: Open or create a paper-planning canvas in the current repository and save it as .canvas.
 ---
 
-# Research Canvas
+# DotCanvas
 
 Use this skill when the user wants to plan, decompose, or revise a research paper visually.
 

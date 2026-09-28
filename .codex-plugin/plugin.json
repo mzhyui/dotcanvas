@@ -1,5 +1,5 @@
 {
-  "name": "research-canvas",
+  "name": "dotcanvas",
   "version": "0.1.0",
   "description": "A lightweight paper-planning canvas for Codex repositories.",
   "author": { "name": "mzhyui" },
@@ -7,7 +7,7 @@
   "keywords": ["research", "paper", "canvas", "writing", "outline"],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Research Canvas",
+    "displayName": "DotCanvas",
     "shortDescription": "Plan papers with connected cards",
     "longDescription": "Open a paper repository canvas, arrange section cards, connect ideas, and save the plan as .canvas JSON.",
     "developerName": "mzhyui",

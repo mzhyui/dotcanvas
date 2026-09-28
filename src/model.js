@@ -29,7 +29,7 @@ function seedCanvas() {
       anchor: ''
     })),
     edges: [],
-    metadata: { 'research-canvas': { version: 1 } }
+    metadata: { dotcanvas: { version: 1 } }
   };
 }
 
