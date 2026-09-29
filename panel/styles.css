@@ -1,1 +1,64 @@
-:root{font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f5f7fb}*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden}header{height:54px;background:#fff;border-bottom:1px solid #dce2ec;display:flex;align-items:center;justify-content:space-between;padding:0 18px}.brand,.toolbar{display:flex;align-items:center;gap:10px}.brand img{width:25px;height:25px}.brand span{color:#7b8494;font-size:12px;margin-left:8px}.toolbar button,button{border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:7px 11px;color:#243047;cursor:pointer}.toolbar button:hover,button:hover{background:#eef4ff}.toolbar span{font-size:12px;color:#64748b;min-width:58px}main{height:calc(100vh - 54px);display:flex}aside{width:270px;background:#fff;border-right:1px solid #dce2ec;padding:15px;z-index:5}#search{width:100%;padding:9px;border:1px solid #d4dbe7;border-radius:7px;margin-bottom:15px}.muted{color:#8a94a6;line-height:1.5}.field{margin:12px 0}.field label{display:block;font-size:11px;text-transform:uppercase;color:#657187;margin-bottom:5px;font-weight:700}.field input,.field textarea,.field select{width:100%;border:1px solid #d4dbe7;border-radius:6px;padding:8px;font:inherit}.field textarea{min-height:90px;resize:vertical}.actions{display:flex;gap:7px}.danger{color:#b42318;border-color:#efb4b0}#viewport{position:relative;overflow:hidden;flex:1;background-color:#f8fafc;background-image:radial-gradient(#dbe2ed 1px,transparent 1px);background-size:22px 22px;cursor:grab}#viewport.panning{cursor:grabbing}#world{position:absolute;left:0;top:0;transform-origin:0 0;width:1px;height:1px}.card{position:absolute;width:280px;min-height:150px;border:1px solid #cbd5e1;border-top:5px solid #3b82f6;background:#fff;border-radius:9px;box-shadow:0 5px 16px #1e293b18;padding:12px;cursor:move;user-select:none}.card.selected{outline:2px solid #2563eb;box-shadow:0 7px 22px #2563eb35}.card h3{margin:0 0 8px;font-size:15px}.card .body{white-space:pre-wrap;color:#4a5568;font-size:12px;line-height:1.45;max-height:80px;overflow:hidden}.card .tag{display:inline-block;margin-top:9px;color:#64748b;font-size:11px;background:#f1f5f9;padding:3px 6px;border-radius:4px}.card .status{float:right;font-size:10px;color:#64748b;text-transform:uppercase}.card.hidden{display:none}#edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}.edge{stroke:#64748b;stroke-width:2;fill:none;marker-end:url(#arrow)}.edge.selected{stroke:#2563eb;stroke-width:3}.empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;color:#7b8494;line-height:2}.empty button{margin:auto}.hidden{display:none!important}
+:root { font: 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f5f7fb; }
+* { box-sizing: border-box; }
+body { margin: 0; height: 100vh; overflow: hidden; }
+header { height: 54px; background: #fff; border-bottom: 1px solid #dce2ec; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+.brand, .toolbar { display: flex; align-items: center; gap: 10px; }
+.brand img { width: 25px; height: 25px; }
+.brand span { color: #7b8494; font-size: 12px; margin-left: 8px; }
+button { border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; padding: 7px 11px; color: #243047; cursor: pointer; }
+button:hover { background: #eef4ff; }
+button:disabled { opacity: .45; cursor: default; }
+.toolbar span { font-size: 12px; color: #64748b; min-width: 58px; }
+main { height: calc(100vh - 54px); display: flex; }
+aside { flex: 0 0 300px; min-width: 0; min-height: 0; background: #fff; border-right: 1px solid #dce2ec; padding: 15px; z-index: 5; display: flex; flex-direction: column; }
+#search { width: 100%; padding: 9px; border: 1px solid #d4dbe7; border-radius: 7px; margin-bottom: 12px; flex: none; }
+#inspector { flex: 1; min-height: 0; overflow: auto; }
+#card-editor { display: flex; flex-direction: column; height: 100%; min-height: 460px; gap: 10px; }
+#edge-editor { display: flex; flex-direction: column; gap: 12px; }
+.muted { color: #657187; line-height: 1.6; }
+.selection-count { font-size: 12px; color: #64748b; margin: 0; flex: none; }
+.field { min-width: 0; }
+.field label { display: block; font-size: 11px; text-transform: uppercase; color: #657187; margin-bottom: 5px; font-weight: 700; }
+.field input, .field textarea, .field select { width: 100%; border: 1px solid #d4dbe7; border-radius: 6px; padding: 8px; font: inherit; }
+.field-row { display: flex; gap: 8px; }
+.field-row .field { flex: 1; }
+.core-field { flex: 1; min-height: 180px; display: flex; flex-direction: column; }
+.core-field textarea { flex: 1; min-height: 150px; resize: none; line-height: 1.5; }
+details { flex: none; color: #657187; font-size: 12px; }
+details summary { cursor: pointer; padding: 5px 0; }
+details .field { margin-top: 8px; }
+.actions { display: flex; gap: 7px; flex: none; }
+.danger { color: #b42318; border-color: #efb4b0; }
+#viewport { position: relative; overflow: hidden; flex: 1; min-width: 0; outline: none; background-color: #f8fafc; background-image: radial-gradient(#dbe2ed 1px, transparent 1px); background-size: 22px 22px; cursor: grab; touch-action: none; }
+#viewport.panning { cursor: grabbing; }
+#viewport.selecting { cursor: crosshair; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; width: 1px; height: 1px; }
+#cards { position: absolute; left: 0; top: 0; z-index: 1; }
+.card { position: absolute; border-radius: 9px; background: #fff; box-shadow: 0 5px 16px #1e293b18, inset 0 0 0 1px #cbd5e1; cursor: move; user-select: none; }
+.card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--card-color); border-radius: 9px 9px 0 0; }
+.card.selected { outline: 2px solid #2563eb; box-shadow: 0 7px 22px #2563eb35; }
+.card-content { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 8px; padding: 12px; overflow: hidden; border-radius: inherit; }
+.card-header { display: flex; align-items: start; gap: 8px; flex: none; }
+.card h3 { margin: 0; font-size: 14px; line-height: 1.35; min-width: 0; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.card .status { font-size: 9px; color: #64748b; text-transform: uppercase; padding-top: 2px; flex: none; }
+.card .body { flex: 1; min-height: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #4a5568; font-size: 12px; line-height: 1.5; overscroll-behavior: contain; cursor: text; user-select: text; scrollbar-width: thin; }
+.card .tag { flex: none; height: 19px; line-height: 19px; min-width: 0; color: #64748b; font-size: 10px; background: #f1f5f9; padding: 0 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.handle { position: absolute; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; border-radius: 50%; opacity: 0; pointer-events: none; cursor: crosshair; z-index: 3; transform: translate(-50%, -50%); }
+.handle::after { content: ''; position: absolute; width: 10px; height: 10px; top: 5px; left: 5px; border: 2px solid var(--card-color); border-radius: 50%; background: #fff; }
+.handle-top { top: 0; left: 50%; }
+.handle-right { top: 50%; left: 100%; }
+.handle-bottom { top: 100%; left: 50%; }
+.handle-left { top: 50%; left: 0; }
+.card:hover .handle, .card.selected .handle, .connecting .handle, .handle:focus-visible { opacity: 1; pointer-events: auto; }
+.handle:hover, .handle.connection-target { background: #bfdbfe; }
+.handle.connection-target::after { background: #2563eb; border-color: #2563eb; }
+#edges { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.edge-line, .connection-preview { stroke: #64748b; stroke-width: 2; fill: none; pointer-events: none; }
+.edge-hit { stroke: transparent; stroke-width: 16; fill: none; pointer-events: stroke; cursor: pointer; }
+.selected .edge-line { stroke: #2563eb; stroke-width: 3; }
+.edge-label { fill: #64748b; font-size: 10px; paint-order: stroke; stroke: #f8fafc; stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.connection-preview { stroke: #2563eb; stroke-dasharray: 5 4; }
+#marquee { position: absolute; border: 1.5px dashed #2563eb; background: #2563eb18; pointer-events: none; z-index: 4; }
+.empty { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: #7b8494; line-height: 2; pointer-events: none; }
+.empty button { margin: auto; pointer-events: auto; }
+.hidden { display: none !important; }

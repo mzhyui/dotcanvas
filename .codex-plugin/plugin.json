@@ -1,6 +1,6 @@
 {
   "name": "dotcanvas",
-  "version": "0.1.0+codex.20260928164548",
+  "version": "0.1.2+codex.20260929120753",
   "description": "A lightweight paper-planning canvas for Codex repositories.",
   "author": {
     "name": "mzhyui"

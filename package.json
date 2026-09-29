@@ -1,0 +1,13 @@
+{
+  "name": "dotcanvas",
+  "version": "0.1.2",
+  "private": true,
+  "description": "Dependency-free paper canvas with development-only browser tests",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node --test tests/browser.spec.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
