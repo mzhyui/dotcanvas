@@ -17,6 +17,32 @@ const ASSETS = {
   '/icon.svg': ['icon.svg', 'image/svg+xml']
 };
 
+function parseArgs(args) {
+  const options = { port: 38473 };
+  for (let i = 0; i < args.length; i += 2) {
+    if (!['--root', '--port'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) {
+      throw new Error('Usage: --root <paper-repository> [--port <port>]');
+    }
+    options[args[i].slice(2)] = args[i + 1];
+  }
+  if (!options.root) throw new Error('A paper repository is required: --root <paper-repository>');
+  if (!/^\d+$/.test(String(options.port)) || Number(options.port) > 65535) {
+    throw new Error('Port must be an integer from 0 to 65535.');
+  }
+  options.port = Number(options.port);
+  return options;
+}
+
+function listen(server, port) {
+  return new Promise((resolve, reject) => {
+    function failed(error) { server.removeListener('listening', ready); reject(error); }
+    function ready() { server.removeListener('error', failed); resolve(); }
+    server.once('error', failed);
+    server.once('listening', ready);
+    server.listen(port, '127.0.0.1');
+  });
+}
+
 function send(res, status, body, type = 'application/json; charset=utf-8') {
   res.writeHead(status, {
     'Content-Type': type,
@@ -47,6 +73,17 @@ function createServer(root) {
   if (!fs.statSync(paperRoot).isDirectory()) throw new Error('Paper root must be a directory.');
   const canvasPath = path.join(paperRoot, '.canvas');
   const panelRoot = path.resolve(__dirname, '..', 'panel');
+  // Freeze assets and identity together so an old process cannot claim a new build.
+  const assets = new Map(Object.values(ASSETS).map(([name]) => [name, fs.readFileSync(path.join(panelRoot, name))]));
+  const hash = crypto.createHash('sha256');
+  for (const [name, contents] of assets) hash.update(name).update(contents);
+  for (const name of ['scripts/serve.js', 'scripts/open.js', 'src/model.js', '.codex-plugin/plugin.json']) {
+    hash.update(name).update(fs.readFileSync(path.resolve(__dirname, '..', name)));
+  }
+  const identity = { service: 'dotcanvas', protocol: 1, root: paperRoot, canvasPath,
+    version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.codex-plugin/plugin.json'))).version,
+    build: hash.digest('hex'), pid: process.pid };
+  let initialized = false;
 
   async function readCanvas() {
     try {
@@ -55,7 +92,20 @@ function createServer(root) {
       const contents = await fsp.readFile(canvasPath, 'utf8');
       return serializeCanvas(parseCanvas(contents));
     } catch (error) {
-      if (error.code === 'ENOENT') return serializeCanvas(seedCanvas());
+      if (error.code === 'ENOENT') {
+        const temporary = path.join(paperRoot, '.canvas.init-' + crypto.randomUUID());
+        try {
+          await fsp.writeFile(temporary, serializeCanvas(seedCanvas()), { flag: 'wx', mode: 0o600 });
+          // Atomic create-if-absent; another opener or editor may win the race.
+          await fsp.link(temporary, canvasPath);
+          initialized = true;
+        } catch (createError) {
+          if (createError.code !== 'EEXIST') throw createError;
+        } finally {
+          await fsp.rm(temporary, { force: true });
+        }
+        return readCanvas();
+      }
       throw error;
     }
   }
@@ -71,7 +121,12 @@ function createServer(root) {
     }
   }
 
-  return http.createServer(async (req, res) => {
+  async function health() {
+    const canvas = JSON.parse(await readCanvas());
+    return { ...identity, ready: true, initialized, nodes: canvas.nodes.length, edges: canvas.edges.length };
+  }
+
+  const server = http.createServer(async (req, res) => {
     try {
       const pathname = new URL(req.url, 'http://localhost').pathname;
       if (pathname === '/api/canvas' && req.method === 'GET') {
@@ -80,10 +135,10 @@ function createServer(root) {
         await writeCanvas(await readBody(req));
         send(res, 200, JSON.stringify({ saved: true }));
       } else if (pathname === '/health' && req.method === 'GET') {
-        send(res, 200, JSON.stringify({ ready: true }));
+        send(res, 200, JSON.stringify(await health()));
       } else if (Object.hasOwn(ASSETS, pathname) && req.method === 'GET') {
         const [filename, type] = ASSETS[pathname];
-        send(res, 200, await fsp.readFile(path.join(panelRoot, filename)), type);
+        send(res, 200, assets.get(filename), type);
       } else {
         send(res, 404, JSON.stringify({ error: 'Not found.' }));
       }
@@ -92,25 +147,24 @@ function createServer(root) {
       send(res, status, JSON.stringify({ error: status === 500 ? 'Canvas request failed.' : error.message }));
     }
   });
+  server.identity = identity;
+  server.health = health;
+  return server;
 }
 
 if (require.main === module) {
-  const args = process.argv.slice(2);
-  const rootIndex = args.indexOf('--root');
-  const portIndex = args.indexOf('--port');
-  if (rootIndex < 0 || !args[rootIndex + 1]) {
-    console.error('Usage: node scripts/serve.js --root <paper-repository> [--port <port>]');
-    process.exit(2);
-  }
-  const port = portIndex < 0 ? 38473 : Number(args[portIndex + 1]);
-  if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    console.error('Port must be an integer from 0 to 65535.');
-    process.exit(2);
-  }
-  const server = createServer(args[rootIndex + 1]);
-  server.listen(port, '127.0.0.1', () => {
+  (async () => {
+    const { root, port } = parseArgs(process.argv.slice(2));
+    const server = createServer(root);
+    await server.health();
+    await listen(server, port);
     console.log('DotCanvas ready on http://127.0.0.1:' + server.address().port);
+  })().catch(error => {
+    console.error(error.code === 'EADDRINUSE'
+      ? 'DotCanvas: port is occupied. Use scripts/open.js to reuse a matching server or choose a free port.'
+      : 'DotCanvas: ' + error.message);
+    process.exitCode = 1;
   });
 }
 
-module.exports = { createServer };
+module.exports = { createServer, listen, parseArgs };

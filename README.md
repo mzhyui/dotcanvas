@@ -2,12 +2,15 @@
 
 DotCanvas is a dependency-free Codex plugin for planning a paper as connected cards. It stores one Obsidian-compatible JSON canvas at `<paper-repository>/.canvas`.
 
+In Codex, say **“open DotCanvas”** or **“open canvas.”** The [skill](skills/dotcanvas/SKILL.md) instructs Codex to immediately start or reuse the webserver, then call `open_in_codex` to show its URL in the current chat's right panel. A successful launch proceeds directly to opening; extra diagnostics run only for a failure or an explicit request. If the app queues the tab, Codex reports that status and returns promptly.
+
 ## Contents
 
 - `.codex-plugin/plugin.json` — plugin metadata.
 - `skills/dotcanvas/SKILL.md` — Codex launch and filesystem bridge contract.
 - `panel/` — bundled static panel (`index.html`, `styles.css`, `app.js`).
 - `scripts/serve.js` — localhost panel and atomic `.canvas` file bridge.
+- `scripts/open.js` — bounded startup, repo/build verification, and server reuse.
 - `src/model.js` — validation, seed, and serialization helpers.
 - `tests/model.test.js` — model tests.
 
@@ -22,10 +25,16 @@ node --test tests/*.test.js
 For an editable canvas, run:
 
 ```sh
-node scripts/serve.js --root /path/to/paper-repository --port 38473
+node scripts/open.js --root /path/to/paper-repository
 ```
 
-Open `http://127.0.0.1:38473` on that machine. If the repository is on an SSH host, forward its port 38473 to the desktop's loopback interface and open the forwarded URL. The server binds only to loopback, validates each canvas, and atomically writes `<paper-repository>/.canvas`.
+The command returns a JSON receipt with the verified URL, port, repository, build, PID, card/link counts, reuse status, and startup time. It reuses a healthy server for the same repository and build, or starts a detached server. It tries port 38473 and stable repository-specific fallback ports without stopping existing listeners. Startup has a six-second deadline; local probes bypass proxy environment variables. `--port 0` requests a fresh OS-assigned port. No process scanning or manual port retries are needed.
+
+Open the returned URL on that machine. If the repository is on an SSH host, forward the **returned port** to the desktop's loopback interface and open the forwarded URL. A queued Codex browser tab is a UI handoff, not a loading loop: return the link promptly and let the app show the tab when its chat is visible. Do not launch headless Chromium during routine opening.
+
+The server binds only to loopback, validates each canvas, and atomically writes `<paper-repository>/.canvas`. An absent canvas is initialized once; existing canvas bytes are preserved on opening. `/health` identifies the repository, plugin version, content build hash, and PID, and validates the saved canvas. Assets are held with their build identity for the lifetime of the process; starting a newer build does not alter another open session.
+
+For foreground development, `node scripts/serve.js --root /path/to/paper-repository --port 0` prints its assigned URL and runs until stopped. An explicit occupied port produces a concise error recommending the launcher.
 
 Open `panel/index.html` directly for a preview without file saving. A Codex host may also inject `window.canvasHost` or handle `canvas:save` messages.
 

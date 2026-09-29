@@ -1,20 +1,44 @@
 ---
 name: dotcanvas
-description: Open or create a paper-planning canvas in the current repository and save it as .canvas.
+description: Open DotCanvas immediately in the current Codex browser panel. Start or reuse its local webserver and preserve the repository's .canvas. Use for open canvas, open DotCanvas, or show the paper-planning panel.
 ---
 
 # DotCanvas
 
-Use this skill when the user wants to plan, decompose, or revise a research paper visually.
+Use this skill when the user asks to open DotCanvas or wants to plan, decompose, or revise a research paper visually.
 
-## Launch contract
+## Open immediately
 
-1. Resolve the active paper repository root from the workspace context.
-2. Use `<paper-root>/.canvas` as the canonical path.
-3. Read that file if it exists. If it does not exist, initialize it from the standard section scaffold in `panel/app.js`.
-4. Start `node <plugin-root>/scripts/serve.js --root <paper-root> --port 38473`. It binds to `127.0.0.1` and serves the panel with a validated, atomic `.canvas` save API. Keep it running while the user edits.
-5. Open `http://127.0.0.1:38473` in a browser tab. When the Codex task runs on an SSH host, forward that host's port 38473 to the desktop's loopback interface before opening the URL. Never open a remote `file://` path in the desktop browser.
-6. Verify the panel loads the repository's existing `.canvas` and that the browser shows no load error. Do not report the canvas as open until the browser tab renders.
+Treat “open canvas”, “open DotCanvas”, and “open the plugin panel” as requests to
+perform the opening now. Starting the server and opening its browser panel are both
+part of the request. Do not stop at a URL or tell the user to open it manually when
+the panel-opening tool is available. Do not ask whether to launch or open it again.
+
+After reading required workspace instructions, follow this short path:
+
+1. **Launch first.** Use the paper repository specified by the user, otherwise the active workspace repository. The plugin root is two directories above this skill directory. Run `node "<plugin-root>/scripts/open.js" --root "<paper-root>"` immediately, with a short command wait (about 1 second). If execution yields, collect that command's result. The launcher returns within 6 seconds or reports a startup error. It already preserves/validates `.canvas`, initializes it only if absent, and starts or reuses a server.
+2. **Open next.** Read `url` and `port` from the successful JSON receipt. The next tool action should open the panel; only discovering the opener or establishing required SSH forwarding may intervene. Call `open_in_codex` with the concrete URL and these arguments:
+
+   ```json
+   {"target":{"type":"browser","url":"<returned-or-forwarded-url>"},"placement":"right"}
+   ```
+
+   Omit `threadId` so the panel belongs to the calling chat. Discover `open_in_codex` if deferred. The localhost web page **is** the DotCanvas plugin panel; no separate plugin-panel tool or `file://` page is needed. For an SSH workspace, use the host's supported forwarding facility for the **returned port**, then open its desktop URL. If forwarding or the opener is unavailable, return the verified endpoint and the specific limitation.
+3. **Return promptly.** Give the link and the actual opener status. If it reports `queued`, say the panel is queued and finish; the app will present it when the chat is shown in the same window. Do not poll, sleep, or submit repeated opens to wait for visibility. Report a visible panel only when observed.
+
+Do not put optional repository inventories, manuscript reads, process/port scans,
+canvas dumps, repeated health checks, dependency installs, test suites, or headless
+Chromium runs between the user's opening request and the panel-opening call.
+The launch receipt already verifies the server identity and canvas. Additional
+diagnostics are for a failed launch/load or an explicit user request.
+
+## Failure handling
+
+The launcher leaves existing listeners untouched, including older builds and other repositories.
+`--port <port>` changes the preferred port; `--port 0` requests an OS-assigned port without reuse.
+On a sandbox bind/connect restriction, use the normal permission route to run the same command on
+the workspace host; a sandbox port scan is not proof a host port is free. Invalid canvas data is
+reported without replacing the file. Do not try more ports for a permissions or validation error.
 
 The panel can also use an injected host bridge:
 
