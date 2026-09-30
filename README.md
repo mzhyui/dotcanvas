@@ -1,6 +1,6 @@
 # DotCanvas
 
-DotCanvas is a dependency-free Codex plugin for planning a paper as connected cards. It stores one Obsidian-compatible JSON canvas at `<paper-repository>/.canvas`.
+DotCanvas is a self-contained Codex plugin for planning a paper as connected cards. It stores one Obsidian-compatible JSON canvas at `<paper-repository>/.canvas`.
 
 In Codex, say **“open DotCanvas”** or **“open canvas.”** The [skill](skills/dotcanvas/SKILL.md) instructs Codex to immediately start or reuse the webserver, then call `open_in_codex` to show its URL in the current chat's right panel. A successful launch proceeds directly to opening; extra diagnostics run only for a failure or an explicit request. If the app queues the tab, Codex reports that status and returns promptly.
 
@@ -16,7 +16,7 @@ In Codex, say **“open DotCanvas”** or **“open canvas.”** The [skill](ski
 
 ## Development
 
-No dependencies or build step are required to run the editor. Run the geometry, model, and server tests with:
+No dependency installation or build step is required to run the editor. Markdown rendering uses a bundled local copy of [markdown-it](panel/vendor/README.md). Run the geometry, model, and server tests with:
 
 ```sh
 node --test tests/*.test.js
@@ -44,14 +44,15 @@ Nodes use the Obsidian Canvas fields `id`, `type`, `x`, `y`, `width`, `height`, 
 
 ## Controls
 
-Use **＋ Card** to add a card and select its header to edit it. The Core editor fills the sidebar; **Source details** expands the path and anchor fields. Cards devote their remaining height to scrollable core text and show a compact source footer; hover that footer to read the full path.
+Use **＋ Card** to add a card and select it to edit its full Markdown source in the sidebar. Headings, emphasis, lists, quotes, links, code blocks, and tables render on the card. **Apply** or **Ctrl/Cmd+S** applies the edit; the shortcut also immediately saves pending changes. Raw HTML stays literal text. **Source details** expands the path and anchor fields. Cards devote their remaining height to scrollable Markdown and show a compact source footer; hover that footer to read the full path. The sidebar source editor remains scrollable, and card scroll positions survive edits and redraws when their content still extends that far.
 
 - Drag between the handles at the top, right, bottom, or left of two cards to create an unnamed directed connection. Invalid drops, self-connections, and exact duplicates are canceled. Existing side choices and labels are preserved.
 - **Middle-drag empty canvas** to box-select fully enclosed cards. Hold Ctrl, Cmd, or Shift to add to the selection. Modifier-click a card to toggle it.
-- Drag a selected card's header or footer to move all selected cards together. Core text remains selectable and scrollable without moving the card.
+- Drag a selected card's header or footer to move all selected cards together. Markdown remains selectable and scrollable without moving the card.
+- Drag a card's bottom-right corner to resize it, or edit **Width** and **Height** in the sidebar and apply. Resizing follows zoom, keeps connections attached, and stops at 180 × 120 canvas units. With the corner handle focused, arrow keys resize by 10 units; hold Shift for 1 unit. Existing smaller cards retain their saved dimensions until resized.
 - Left-drag empty canvas to pan. Click empty canvas to clear selection. Use the wheel outside card text to zoom around the pointer. Right-click retains the normal browser menu.
-- Click a connection to select it, edit **Name** in the sidebar, and press **Apply** or Enter. Leave Name blank to remove it. Names autosave after applying and support undo/redo. Delete/Backspace removes selected cards and connections; connections attached to removed cards are removed too.
-- Escape cancels an active gesture. Each completed move, connection, edit, or deletion is one undo step. Use the toolbar or Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z for undo/redo.
+- Click a connection to select it, edit **Name** in the sidebar, and press **Apply**, Enter, or Ctrl/Cmd+S. Leave Name blank to remove it. Names autosave after applying and support undo/redo. Delete/Backspace removes selected cards and connections; connections attached to removed cards are removed too.
+- Escape cancels an active gesture. Each completed move, resize, connection, edit, or deletion is one undo step. Use the toolbar or Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z for undo/redo.
 
 Changes autosave after a 450 ms debounce. Selection survives autosave. Opening a canvas, selecting, panning, or zooming does not rewrite it. Temporary selections are not saved group objects.
 

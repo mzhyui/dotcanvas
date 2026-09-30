@@ -42,5 +42,6 @@ test('local bridge loads, validates, and atomically saves a canvas', async t => 
   assert.equal(JSON.parse(await fs.readFile(path.join(root, '.canvas'), 'utf8')).nodes[0].text, '# Updated introduction');
   assert.equal((await fetch(base + '/app.js')).status, 200);
   assert.equal((await fetch(base + '/geometry.js')).status, 200);
+  assert.equal((await fetch(base + '/vendor/markdown-it.min.js')).status, 200);
   assert.equal((await fetch(base + '/../src/model.js')).status, 404);
 });

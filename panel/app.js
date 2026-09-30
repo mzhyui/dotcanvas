@@ -1,6 +1,13 @@
 (function () {
   'use strict';
   const G = window.CanvasGeometry;
+  const markdown = window.markdownit({ html: false });
+  const MIN_WIDTH = 180, MIN_HEIGHT = 120;
+  markdown.renderer.rules.link_open = (tokens, index, options, env, renderer) => {
+    tokens[index].attrSet('target', '_blank');
+    tokens[index].attrSet('rel', 'noopener noreferrer');
+    return renderer.renderToken(tokens, index, options);
+  };
   const SECTIONS = ['Introduction', 'Related Work', 'Method', 'Evaluation', 'Conclusion'];
   const COLORS = { '1': '#3b82f6', '2': '#8b5cf6', '3': '#10b981', '4': '#f59e0b', '5': '#ef4444', '6': '#64748b' };
   const $ = id => document.getElementById(id);
@@ -17,8 +24,7 @@
   const additive = e => e.ctrlKey || e.metaKey || e.shiftKey;
   const point = e => ({ x: e.clientX, y: e.clientY });
   const worldPoint = e => G.screenToWorld(point(e), viewport.getBoundingClientRect(), pan, scale);
-  const title = n => (n.text.split('\n').find(s => s.trim()) || n.section || 'Untitled').replace(/^#\s*/, '');
-  const body = n => n.text.replace(/^.*?(?:\n|$)\n?/, '');
+  const title = n => (n.text.split('\n').find(s => s.trim()) || n.section || 'Untitled').replace(/^#{1,6}\s+/, '');
 
   function seed() {
     const descriptions = ['Frame the problem, motivation, and contribution.', 'Position the paper against the closest prior work.', 'Describe the proposed approach and its assumptions.', 'Define datasets, baselines, metrics, and research questions.', 'Summarize findings, limitations, and future work.'];
@@ -96,6 +102,10 @@
   }
   function render() {
     reconcileSelection();
+    const scroll = new Map([...cardElements].map(([id, el]) => {
+      const body = el.querySelector('.body');
+      return [id, { top: body.scrollTop, left: body.scrollLeft }];
+    }));
     cards.replaceChildren();
     cardElements.clear();
     edges.innerHTML = '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 z" fill="#64748b"/></marker></defs>';
@@ -109,7 +119,7 @@
       el.style.setProperty('--card-color', COLORS[n.color] || COLORS['1']);
       const path = n.path ? `${n.path}${n.anchor ? '#' + n.anchor : ''}` : '';
       const shortPath = n.path ? `${n.path.split(/[\\/]/).pop()}${n.anchor ? '#' + n.anchor : ''}` : '';
-      el.innerHTML = `<div class="card-content"><div class="card-header"><h3 title="${esc(title(n))}">${esc(title(n))}</h3><span class="status">${esc(n.status || 'draft')}</span></div><div class="body" tabindex="0">${esc(body(n) || 'Add a short idea…')}</div>${path ? `<div class="tag" title="${esc(path)}">${esc(shortPath)}</div>` : ''}</div>`;
+      el.innerHTML = `<div class="card-content"><div class="card-header"><span class="card-section" title="${esc(title(n))}">${esc(n.section || 'Card')}</span><span class="status">${esc(n.status || 'draft')}</span></div><div class="body markdown" tabindex="0" aria-label="${esc(title(n))}">${n.text.trim() ? markdown.render(n.text) : '<p class="muted">Add Markdown in the side panel…</p>'}</div>${path ? `<div class="tag" title="${esc(path)}">${esc(shortPath)}</div>` : ''}</div>`;
       for (const side of G.SIDES) {
         const handle = document.createElement('button');
         handle.type = 'button';
@@ -119,7 +129,17 @@
         handle.title = `Drag ${side} connection`;
         el.appendChild(handle);
       }
+      const resize = document.createElement('button');
+      resize.type = 'button';
+      resize.className = 'resize-handle';
+      resize.setAttribute('aria-label', `Resize ${title(n)}`);
+      resize.title = 'Drag to resize; use arrow keys for 10 px steps (Shift: 1 px)';
+      el.appendChild(resize);
       cards.appendChild(el);
+      if (scroll.has(n.id)) {
+        el.querySelector('.body').scrollTop = scroll.get(n.id).top;
+        el.querySelector('.body').scrollLeft = scroll.get(n.id).left;
+      }
       cardElements.set(n.id, el);
     }
     for (const edge of canvas.edges) {
@@ -144,6 +164,8 @@
       const el = cardElements.get(n.id);
       el.style.left = n.x + 'px';
       el.style.top = n.y + 'px';
+      el.style.width = n.width + 'px';
+      el.style.height = n.height + 'px';
     }
     for (const e of canvas.edges) {
       const a = node(e.fromNode), b = node(e.toNode), el = edgeElements.get(e.id);
@@ -175,19 +197,37 @@
       selectedEdges.clear();
     });
   }
+  function applyEditor(fn) {
+    const active = inspector.contains(document.activeElement) ? document.activeElement : null;
+    const source = $('f-body'), detailsOpen = inspector.querySelector('details')?.open;
+    const view = { top: inspector.scrollTop, sourceTop: source?.scrollTop, sourceLeft: source?.scrollLeft,
+      id: active?.id, start: active?.selectionStart, end: active?.selectionEnd, direction: active?.selectionDirection };
+    commit(fn);
+    const next = view.id && $(view.id);
+    if (next) {
+      next.focus({ preventScroll: true });
+      if (view.start != null) next.setSelectionRange(view.start, view.end, view.direction);
+    }
+    if ($('f-body')) {
+      $('f-body').scrollTop = view.sourceTop;
+      $('f-body').scrollLeft = view.sourceLeft;
+      inspector.querySelector('details').open = detailsOpen;
+    }
+    inspector.scrollTop = view.top;
+  }
   function renderInspector() {
     if (!selectedNodes.size && !selectedEdges.size) {
-      inspector.innerHTML = '<p class="muted">Select a card to edit its core text. Drag between edge handles to connect cards.</p><p class="muted">Middle-drag empty space to select cards. Hold Ctrl, ⌘, or Shift to add to the selection. Drag a selected card to move them together.</p>';
+      inspector.innerHTML = '<p class="muted">Select a card to edit its Markdown. Drag its bottom-right corner to resize, or use Width and Height in this panel. Drag between edge handles to connect cards.</p><p class="muted">Middle-drag empty space to select cards. Hold Ctrl, ⌘, or Shift to add to the selection. Drag a selected card to move them together.</p>';
       return;
     }
     const count = `${selectedNodes.size} card${selectedNodes.size === 1 ? '' : 's'}${selectedEdges.size ? ` · ${selectedEdges.size} connection${selectedEdges.size === 1 ? '' : 's'}` : ''} selected`;
     if (!selectedNodes.size && selectedEdges.size === 1) {
       const edge = canvas.edges.find(e => selectedEdges.has(e.id));
-      inspector.innerHTML = `<form id="edge-editor"><p class="selection-count">1 connection selected</p><div class="field"><label for="f-edge-label">Name</label><input id="f-edge-label" value="${esc(edge.label || '')}" placeholder="Optional connection name"/></div><p class="muted">Leave blank to remove the name.</p><div class="actions"><button id="apply" type="submit">Apply</button><button id="delete" type="button" class="danger">Delete</button></div></form>`;
+      inspector.innerHTML = `<form id="edge-editor"><p class="selection-count">1 connection selected</p><div class="field"><label for="f-edge-label">Name</label><input id="f-edge-label" value="${esc(edge.label || '')}" placeholder="Optional connection name"/></div><p class="muted">Leave blank to remove the name.</p><div class="actions"><button id="apply" type="submit" title="Apply (Ctrl/Cmd+S)" aria-keyshortcuts="Control+s Meta+s">Apply</button><button id="delete" type="button" class="danger">Delete</button></div></form>`;
       $('edge-editor').onsubmit = event => {
         event.preventDefault();
         const label = $('f-edge-label').value.trim();
-        commit(() => {
+        applyEditor(() => {
           if (label) edge.label = label;
           else delete edge.label;
         });
@@ -203,13 +243,13 @@
     const n = node([...selectedNodes][0]);
     const sections = [...new Set([...SECTIONS, 'Custom', n.section || 'Custom'])];
     const statuses = [...new Set(['draft', 'ready', 'blocked', n.status || 'draft'])];
-    inspector.innerHTML = `<form id="card-editor"><p class="selection-count">${count}</p><div class="field"><label for="f-title">Title</label><input id="f-title" value="${esc(title(n))}"/></div><div class="field-row"><div class="field"><label for="f-section">Section / type</label><select id="f-section">${sections.map(s => `<option ${s === (n.section || 'Custom') ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div><div class="field"><label for="f-status">Status</label><select id="f-status">${statuses.map(s => `<option ${s === (n.status || 'draft') ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div></div><div class="field core-field"><label for="f-body">Core</label><textarea id="f-body">${esc(body(n))}</textarea></div><details><summary>Source details</summary><div class="field"><label for="f-path">Repository path</label><input id="f-path" value="${esc(n.path || '')}"/></div><div class="field"><label for="f-anchor">Anchor</label><input id="f-anchor" value="${esc(n.anchor || '')}"/></div></details><div class="actions"><button id="apply" type="submit">Apply</button><button id="delete" type="button" class="danger">Delete</button></div></form>`;
+    inspector.innerHTML = `<form id="card-editor"><p class="selection-count">${count}</p><div class="field-row"><div class="field"><label for="f-section">Section / type</label><select id="f-section">${sections.map(s => `<option ${s === (n.section || 'Custom') ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div><div class="field"><label for="f-status">Status</label><select id="f-status">${statuses.map(s => `<option ${s === (n.status || 'draft') ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div></div><div class="field-row"><div class="field"><label for="f-width">Width</label><input id="f-width" type="number" min="${Math.min(n.width, MIN_WIDTH)}" step="any" required value="${n.width}"/></div><div class="field"><label for="f-height">Height</label><input id="f-height" type="number" min="${Math.min(n.height, MIN_HEIGHT)}" step="any" required value="${n.height}"/></div></div><div class="field core-field"><label for="f-body">Markdown</label><textarea id="f-body" spellcheck="false" placeholder="# Title\n\nWrite your Markdown here…">${esc(n.text)}</textarea></div><details><summary>Source details</summary><div class="field"><label for="f-path">Repository path</label><input id="f-path" value="${esc(n.path || '')}"/></div><div class="field"><label for="f-anchor">Anchor</label><input id="f-anchor" value="${esc(n.anchor || '')}"/></div></details><div class="actions"><button id="apply" type="submit" title="Apply (Ctrl/Cmd+S)" aria-keyshortcuts="Control+s Meta+s">Apply</button><button id="delete" type="button" class="danger">Delete</button></div></form>`;
     $('card-editor').onsubmit = event => {
       event.preventDefault();
       const values = { section: $('f-section').value, status: $('f-status').value,
-        text: `# ${$('f-title').value.trim() || $('f-section').value}\n\n${$('f-body').value}`,
+        text: $('f-body').value, width: $('f-width').valueAsNumber, height: $('f-height').valueAsNumber,
         path: $('f-path').value, anchor: $('f-anchor').value };
-      commit(() => Object.assign(n, values));
+      applyEditor(() => Object.assign(n, values));
     };
     $('delete').onclick = deleteSelection;
   }
@@ -238,6 +278,15 @@
       return;
     }
     if (event.button !== 0) return;
+    if (target.closest('.resize-handle')) {
+      const n = node(card.dataset.id);
+      if (selectedNodes.size !== 1 || !selectedNodes.has(n.id) || selectedEdges.size) {
+        selectedNodes = new Set([n.id]); selectedEdges.clear(); updateSelection();
+      }
+      startGesture(event, { kind: 'resize', before: snapshot(), id: n.id, width: n.width, height: n.height });
+      viewport.classList.add('resizing');
+      return;
+    }
     if (handle) {
       startGesture(event, { kind: 'connect', from: card.dataset.id, side: handle.dataset.side });
       viewport.classList.add('connecting');
@@ -280,6 +329,11 @@
     if (gesture.kind === 'move' && gesture.moved) {
       for (const p of gesture.positions) Object.assign(node(p.id), { x: p.x + dx / scale, y: p.y + dy / scale });
       updatePositions();
+    } else if (gesture.kind === 'resize' && gesture.moved) {
+      Object.assign(node(gesture.id), { width: Math.max(MIN_WIDTH, gesture.width + dx / scale),
+        height: Math.max(MIN_HEIGHT, gesture.height + dy / scale) });
+      updatePositions();
+      updateSizeFields(node(gesture.id));
     } else if (gesture.kind === 'pan' && gesture.moved) {
       pan = { x: gesture.initialPan.x + dx, y: gesture.initialPan.y + dy }; updateTransform();
     } else if (gesture.kind === 'marquee') {
@@ -299,7 +353,7 @@
   function clearGesture() {
     const previous = gesture;
     gesture = null;
-    viewport.classList.remove('panning', 'selecting', 'connecting');
+    viewport.classList.remove('panning', 'selecting', 'connecting', 'resizing');
     marquee.classList.add('hidden');
     previewPath?.classList.add('hidden');
     for (const el of viewport.querySelectorAll('.connection-target')) el.classList.remove('connection-target');
@@ -313,6 +367,10 @@
     if (previous.kind === 'move') {
       for (const p of previous.positions) Object.assign(node(p.id), { x: p.x, y: p.y });
       updatePositions();
+    } else if (previous.kind === 'resize') {
+      Object.assign(node(previous.id), { width: previous.width, height: previous.height });
+      updatePositions();
+      updateSizeFields(node(previous.id));
     } else if (previous.kind === 'pan') { pan = previous.initialPan; updateTransform(); }
   }
   function finishGesture(event) {
@@ -321,7 +379,7 @@
     const target = gesture.kind === 'connect' ? handleAt(event) : null;
     const allowed = gesture.kind === 'connect' && connectable(target);
     const previous = clearGesture();
-    if (previous.kind === 'move') {
+    if (previous.kind === 'move' || previous.kind === 'resize') {
       if (previous.before.contents !== JSON.stringify(canvas)) { remember(previous.before); scheduleSave(); }
     } else if (previous.kind === 'pan' && !previous.moved) {
       selectedNodes.clear(); selectedEdges.clear(); updateSelection();
@@ -341,6 +399,21 @@
   viewport.addEventListener('pointercancel', cancelGesture);
   viewport.addEventListener('lostpointercapture', cancelGesture);
   viewport.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+  function updateSizeFields(n) {
+    if ($('f-width')) $('f-width').value = n.width;
+    if ($('f-height')) $('f-height').value = n.height;
+  }
+  viewport.addEventListener('keydown', event => {
+    const handle = event.target.closest('.resize-handle');
+    if (!handle || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const id = handle.closest('.card').dataset.id, n = node(id), step = event.shiftKey ? 1 : 10;
+    commit(() => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') n.width = Math.max(MIN_WIDTH, n.width + (event.key === 'ArrowRight' ? step : -step));
+      else n.height = Math.max(MIN_HEIGHT, n.height + (event.key === 'ArrowDown' ? step : -step));
+    });
+    cardElements.get(id).querySelector('.resize-handle').focus({ preventScroll: true });
+  });
   window.addEventListener('blur', cancelGesture);
   viewport.addEventListener('wheel', event => {
     if (event.target.closest('.body')) return;
@@ -399,13 +472,20 @@
   $('redo').onclick = redo;
   $('search').oninput = event => { cancelGesture(); filter = event.target.value.toLowerCase(); render(); };
   document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      const editor = $('card-editor') || $('edge-editor');
+      if (editor) editor.requestSubmit();
+      flushSave();
+      return;
+    }
     if (event.key === 'Escape') { cancelGesture(); return; }
     if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); cancelGesture(); deleteSelection(); }
     else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }
   });
   window.addEventListener('beforeunload', event => {
-    if (gesture?.kind === 'move' && gesture.moved || pendingPayload !== null || saveState.textContent === 'Unsaved changes') {
+    if (['move', 'resize'].includes(gesture?.kind) && gesture.moved || pendingPayload !== null || saveState.textContent === 'Unsaved changes') {
       event.preventDefault(); event.returnValue = '';
     }
   });

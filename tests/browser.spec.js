@@ -228,8 +228,142 @@ test('DotCanvas browser interactions', { timeout: 120000 }, async suite => {
     const b=await area.boundingBox(); await drag(page,{x:b.x+10,y:b.y+10},{x:b.x+50,y:b.y+30}); assert.deepEqual(await read(page),before);
     const a=await header(page,'a'); await page.mouse.click(a.x,a.y); await page.locator('#f-body').fill('Revised core text');
     await page.locator('#apply').click(); await flush(page);
-    assert.equal((await read(page)).nodes[0].text,'# Card A\n\nRevised core text');
+    assert.equal((await read(page)).nodes[0].text,'Revised core text');
+    assert.equal(await area.locator('p').textContent(),'Revised core text');
     assert.deepEqual((await read(page)).nodes[0].extra,{preserve:'a'});
+  });
+
+  await suite.test('renders full Markdown and applies exact source with Ctrl+S and Cmd+S', async t => {
+    const data = fixture();
+    const source = '# **Rendered title**\n\n## Details\n\nA *small* idea with `code` and ~~old text~~.\n\n- First\n  - Nested\n\n> A quote\n\n```js\nconst tag = "<div>";\n```\n\n| Method | Result |\n| --- | --- |\n| Candidate | pending |\n\n[Reference](https://example.com/paper)\n\n<script>window.markdownExecuted = true</script>\n\n[unsafe](javascript:alert(1))';
+    data.nodes[0].text = source;
+    const { page, file, bytes, saves } = await setup(t, data);
+    const body = page.locator('.card[data-id="a"] .body');
+    assert.equal(await body.locator('h1 strong').textContent(), 'Rendered title');
+    assert.equal(await body.locator('h2').textContent(), 'Details');
+    assert.equal(await body.locator('ul ul li').textContent(), 'Nested');
+    assert.equal(await body.locator('pre code').textContent(), 'const tag = "<div>";\n');
+    assert.equal(await body.locator('table tbody td').first().textContent(), 'Candidate');
+    assert.equal(await body.locator('script, a[href^="javascript:"]').count(), 0);
+    assert.equal(await page.evaluate(() => window.markdownExecuted), undefined);
+    assert.equal(await body.locator('a').getAttribute('rel'), 'noopener noreferrer');
+    assert.equal(await body.locator('a').getAttribute('target'), '_blank');
+    await page.locator('.card[data-id="a"] .card-header').click();
+    assert.equal(await page.locator('#f-body').inputValue(), source);
+    await page.waitForTimeout(500);
+    assert.equal(saves(), 0); assert.equal(await fs.readFile(file, 'utf8'), bytes);
+    await page.evaluate(() => window.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') window.saveShortcutPrevented = e.defaultPrevented;
+    }));
+    for (const shortcut of ['Control+s', 'Meta+s']) {
+      const next = `No heading: **${shortcut}**\n\n\nKeep trailing spaces.  \nSecond line\n`;
+      await page.locator('#f-body').fill(next);
+      await page.locator('#f-body').press(shortcut);
+      assert.equal(await page.evaluate(() => window.saveShortcutPrevented), true);
+      assert.equal((await read(page)).nodes[0].text, next);
+      assert.equal(await body.locator('strong').textContent(), shortcut);
+      await page.waitForFunction(() => document.querySelector('#save-state').textContent === 'Saved');
+      assert.equal(JSON.parse(await fs.readFile(file, 'utf8')).nodes[0].text, next);
+      await page.locator('#undo').click(); assert.equal((await read(page)).nodes[0].text, source);
+    }
+    await page.locator('#redo').click(); await flush(page);
+    const saved = await read(page);
+    await page.reload(); await page.waitForFunction(() => document.querySelector('#save-state').textContent === 'Ready');
+    assert.deepEqual(await read(page), saved);
+  });
+
+  await suite.test('corner resize follows zoom, keeps edges attached, and persists as one undo step', async t => {
+    const { page, file } = await setup(t);
+    const before = await read(page);
+    await page.mouse.move(1200, 850); await page.mouse.wheel(0, 100); await page.waitForTimeout(60);
+    const scale = await page.locator('#world').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).a);
+    const box = await page.locator('.card[data-id="a"] .resize-handle').boundingBox();
+    const a = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await page.mouse.move(a.x, a.y); await page.mouse.down();
+    await page.mouse.move(a.x + 90 * scale, a.y + 60 * scale, { steps: 8 });
+    await attached(page);
+    await page.mouse.up();
+    const after = await read(page), n = after.nodes[0];
+    assert.ok(Math.abs(n.width - 390) < .1 && Math.abs(n.height - 300) < .1);
+    assert.equal(n.x, before.nodes[0].x); assert.equal(n.y, before.nodes[0].y);
+    assert.deepEqual(after.nodes.slice(1), before.nodes.slice(1));
+    assert.ok(Math.abs(Number(await page.locator('#f-width').inputValue()) - 390) < .1);
+    await flush(page); assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), after);
+    await page.locator('#undo').click(); assert.deepEqual(await read(page), before); await attached(page);
+    assert.equal(await page.locator('#undo').isDisabled(), true);
+    await page.locator('#redo').click(); assert.deepEqual(await read(page), after); await attached(page);
+    await flush(page); await page.reload();
+    await page.waitForFunction(() => document.querySelector('#save-state').textContent === 'Ready');
+    assert.deepEqual(await read(page), after); await attached(page);
+  });
+
+  await suite.test('resize cancellation, minimum size, numeric fields, and keyboard resizing', async t => {
+    const { page, saves } = await setup(t), before = await read(page);
+    for (const cancel of ['Escape', 'pointercancel', 'lostpointercapture']) {
+      const b = await page.locator('.card[data-id="a"] .resize-handle').boundingBox();
+      await page.mouse.move(b.x + 8, b.y + 8); await page.mouse.down();
+      await page.mouse.move(b.x + 80, b.y + 50, { steps: 5 });
+      if (cancel === 'Escape') await page.keyboard.press('Escape');
+      else await page.locator('#viewport').dispatchEvent(cancel, { pointerId: 1 });
+      await page.mouse.up(); assert.deepEqual(await read(page), before); await attached(page);
+    }
+    await page.waitForTimeout(500); assert.equal(saves(), 0);
+    const b = await page.locator('.card[data-id="a"] .resize-handle').boundingBox();
+    await drag(page, { x: b.x + 8, y: b.y + 8 }, { x: b.x - 250, y: b.y - 200 });
+    assert.equal((await read(page)).nodes[0].width, 180);
+    assert.equal((await read(page)).nodes[0].height, 120);
+    await attached(page);
+    await page.locator('#f-width').fill('460'); await page.locator('#f-height').fill('330');
+    await page.locator('#apply').click();
+    assert.equal((await read(page)).nodes[0].width, 460); assert.equal((await read(page)).nodes[0].height, 330);
+    await attached(page);
+    await page.locator('#f-width').fill('1'); await page.locator('#f-width').press('Control+s');
+    assert.equal((await read(page)).nodes[0].width, 460, 'Shortcut respects form validation');
+    await page.locator('#f-width').fill('460');
+    await page.locator('.card[data-id="a"] .resize-handle').focus();
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('Shift+ArrowDown');
+    assert.equal((await read(page)).nodes[0].width, 470); assert.equal((await read(page)).nodes[0].height, 331);
+    await attached(page);
+  });
+
+  await suite.test('Markdown scrolling survives edits and resizing without zooming the canvas', async t => {
+    const { page } = await setup(t);
+    const area = page.locator('.card[data-id="a"] .body');
+    await area.hover(); await page.mouse.wheel(0, 200); await page.waitForTimeout(80);
+    const scroll = await area.evaluate(e => e.scrollTop);
+    assert.ok(scroll > 0);
+    await page.locator('.card[data-id="a"] .card-header').click();
+    const source = await page.locator('#f-body').inputValue();
+    await page.locator('#f-body').fill(source + '\n**More Markdown**');
+    const editorScroll = await page.locator('#f-body').evaluate(e => { e.scrollTop = 120; return e.scrollTop; });
+    await page.locator('#f-body').press('Control+s');
+    assert.equal(await area.evaluate(e => e.scrollTop), scroll);
+    assert.equal(await page.locator('#f-body').evaluate(e => e.scrollTop), editorScroll);
+    assert.equal(await page.locator('#f-body').evaluate(e => document.activeElement === e), true);
+    const b = await page.locator('.card[data-id="a"] .resize-handle').boundingBox();
+    await drag(page, { x: b.x + 8, y: b.y + 8 }, { x: b.x + 8, y: b.y + 48 });
+    assert.equal(await area.evaluate(e => e.scrollTop), scroll);
+    await area.hover(); await page.mouse.wheel(0, 80); await page.waitForTimeout(80);
+    assert.ok(await area.evaluate(e => e.scrollTop) > scroll);
+    assert.equal(await page.locator('#world').evaluate(e => getComputedStyle(e).transform), 'matrix(1, 0, 0, 1, 0, 0)');
+    assert.ok(await page.locator('#f-body').evaluate(e => e.scrollHeight > e.clientHeight), 'Source editor scrolls too');
+  });
+
+  await suite.test('Ctrl+S applies a connection name and does not serialize an in-progress resize', async t => {
+    const { page, file } = await setup(t);
+    const p = await page.locator('g[data-edge-id="e-bottom"] .edge-line').evaluate(el => {
+      const p = el.getPointAtLength(el.getTotalLength() / 2).matrixTransform(el.getScreenCTM()); return { x: p.x, y: p.y };
+    });
+    await page.mouse.click(p.x, p.y);
+    await page.locator('#f-edge-label').fill('Applied with keyboard');
+    await page.locator('#f-edge-label').press('Control+s');
+    assert.equal((await read(page)).edges.find(e => e.id === 'e-bottom').label, 'Applied with keyboard');
+    const committed = await read(page);
+    const b = await page.locator('.card[data-id="a"] .resize-handle').boundingBox();
+    await page.mouse.move(b.x + 8, b.y + 8); await page.mouse.down(); await page.mouse.move(b.x + 100, b.y + 40);
+    await page.waitForTimeout(600); await page.keyboard.press('Escape'); await page.mouse.up();
+    assert.deepEqual(await read(page), committed);
+    assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), committed);
   });
 
   await suite.test('multi-card and edge deletion are atomic and undoable', async t => {
