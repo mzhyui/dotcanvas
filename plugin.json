@@ -1,0 +1,40 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "dotcanvas",
+  "version": "0.1.4",
+  "description": "A lightweight paper-planning canvas for Codex repositories.",
+  "author": {
+    "name": "mzhyui"
+  },
+  "license": "MIT",
+  "keywords": [
+    "research",
+    "paper",
+    "canvas",
+    "writing",
+    "outline"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "DotCanvas",
+        "shortDescription": "Plan papers with linked cards",
+        "longDescription": "Open a paper repository canvas, arrange section cards, connect ideas, and save the plan as .canvas JSON.",
+        "developerName": "mzhyui",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write",
+          "Interactive"
+        ],
+        "defaultPrompt": [
+          "Open a research canvas for this paper repository",
+          "Help me decompose this paper into connected section cards"
+        ],
+        "brandColor": "#2563eb",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
+      }
+    }
+  }
+}

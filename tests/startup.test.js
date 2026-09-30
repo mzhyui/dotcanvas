@@ -134,13 +134,16 @@ test('canonical repository aliases reuse the same server', async t => {
   assert.equal(second.details.root, root);
 });
 
-test('a running server keeps the assets belonging to its build identity', async t => {
+test('portable manifest supplies identity without a Codex overlay; running builds keep their assets', async t => {
   const root = await rootFor(t), plugin = await rootFor(t);
-  for (const name of ['scripts', 'src', 'panel', '.codex-plugin']) {
+  for (const name of ['scripts', 'src', 'panel', 'assets', 'plugin.json']) {
     await fs.cp(path.resolve(__dirname, '..', name), path.join(plugin, name), { recursive: true });
   }
   const { createServer: copiedServer } = require(path.join(plugin, 'scripts/serve.js'));
   const server = copiedServer(root);
+  const manifestPath = path.join(plugin, 'plugin.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  assert.equal(server.identity.version, manifest.version);
   await listen(server, 0);
   t.after(() => close(server));
   const asset = path.join(plugin, 'panel/app.js');
@@ -149,7 +152,14 @@ test('a running server keeps the assets belonging to its build identity', async 
   await fs.appendFile(asset, '\n// changed build\n');
   assert.equal(await (await fetch(`http://127.0.0.1:${server.address().port}/app.js`)).text(), original);
   assert.equal((await server.health()).build, build);
-  assert.notEqual(copiedServer(root).identity.build, build);
+  const assetBuild = copiedServer(root).identity.build;
+  assert.notEqual(assetBuild, build);
+  manifest.version = '0.0.0-test';
+  await fs.writeFile(manifestPath, JSON.stringify(manifest));
+  const updated = copiedServer(root).identity;
+  assert.equal(updated.version, manifest.version);
+  assert.notEqual(updated.build, assetBuild);
+  assert.equal((await server.health()).version, server.identity.version);
 });
 
 test('CLI exits promptly while detached server survives and later CLI reuses it', { timeout: 10000 }, async t => {

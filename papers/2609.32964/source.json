@@ -1,0 +1,49 @@
+{
+  "requested_url": "https://arxiv.org/pdf/2609.32964",
+  "versioned_url": "https://arxiv.org/pdf/2609.32964v2",
+  "html_url": "https://arxiv.org/html/2609.32964v2",
+  "title": "The Commit-Abstain Circuit: Why Language Models Hallucinate Instead of Abstaining",
+  "authors": [
+    "Vy Nguyen",
+    "Ziqi Xu",
+    "Jeffrey Chan",
+    "Estrid He",
+    "Feng Xia",
+    "Renqiang Luo",
+    "Erik Cambria",
+    "Xiuzhen Zhang"
+  ],
+  "version": "v2",
+  "version_date": "2026-09-29",
+  "retrieved_at_utc": "2026-09-30T07:45:09.013762+00:00",
+  "license": {
+    "name": "CC BY 4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "verified_on": "https://arxiv.org/abs/2609.32964"
+  },
+  "files": {
+    "source.pdf": {
+      "bytes": 1839749,
+      "sha256": "2eeb999bef67b5506bdcb7931df3d4dacc4e4c9ccc1214467a2c3f83dcdbc949"
+    },
+    "source.txt": {
+      "bytes": 172754,
+      "sha256": "6ad3d60b6b2bbb4a94597ba917c81d67e7846b65563ee7a116db20c3cef43431"
+    }
+  },
+  "extraction": {
+    "tool": "pdftotext -layout",
+    "pages": 37,
+    "exit_code": 0,
+    "warning": "Mismatch between font type and embedded font file",
+    "note": "Text extraction can distort equations and figure labels; canvas references use the original PDF pages."
+  },
+  "canvas": {
+    "active": "../../.canvas",
+    "export": "paper.canvas",
+    "preserved_previous": "previous.canvas",
+    "nodes": 12,
+    "edges": 13
+  },
+  "provenance": "Canvas paraphrases the paper. Numeric findings are author-reported and have not been independently reproduced. PDF and extracted text retain source authorship; the canvas is a derived summary."
+}

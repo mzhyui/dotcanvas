@@ -9,13 +9,14 @@ const { parseCanvas, seedCanvas, serializeCanvas } = require('../src/model');
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const ASSETS = {
-  '/': ['index.html', 'text/html; charset=utf-8'],
-  '/index.html': ['index.html', 'text/html; charset=utf-8'],
-  '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
-  '/geometry.js': ['geometry.js', 'text/javascript; charset=utf-8'],
-  '/vendor/markdown-it.min.js': ['vendor/markdown-it.min.js', 'text/javascript; charset=utf-8'],
-  '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
-  '/icon.svg': ['icon.svg', 'image/svg+xml']
+  '/': ['panel/index.html', 'text/html; charset=utf-8'],
+  '/index.html': ['panel/index.html', 'text/html; charset=utf-8'],
+  '/app.js': ['panel/app.js', 'text/javascript; charset=utf-8'],
+  '/geometry.js': ['panel/geometry.js', 'text/javascript; charset=utf-8'],
+  '/vendor/markdown-it.min.js': ['panel/vendor/markdown-it.min.js', 'text/javascript; charset=utf-8'],
+  '/styles.css': ['panel/styles.css', 'text/css; charset=utf-8'],
+  '/assets/icon.svg': ['assets/icon.svg', 'image/svg+xml'],
+  '/icon.svg': ['assets/icon.svg', 'image/svg+xml']
 };
 
 function parseArgs(args) {
@@ -73,16 +74,16 @@ function createServer(root) {
   const paperRoot = fs.realpathSync(root);
   if (!fs.statSync(paperRoot).isDirectory()) throw new Error('Paper root must be a directory.');
   const canvasPath = path.join(paperRoot, '.canvas');
-  const panelRoot = path.resolve(__dirname, '..', 'panel');
+  const pluginRoot = path.resolve(__dirname, '..');
   // Freeze assets and identity together so an old process cannot claim a new build.
-  const assets = new Map(Object.values(ASSETS).map(([name]) => [name, fs.readFileSync(path.join(panelRoot, name))]));
+  const assets = new Map(Object.values(ASSETS).map(([name]) => [name, fs.readFileSync(path.join(pluginRoot, name))]));
   const hash = crypto.createHash('sha256');
   for (const [name, contents] of assets) hash.update(name).update(contents);
-  for (const name of ['scripts/serve.js', 'scripts/open.js', 'src/model.js', '.codex-plugin/plugin.json']) {
-    hash.update(name).update(fs.readFileSync(path.resolve(__dirname, '..', name)));
+  for (const name of ['scripts/serve.js', 'scripts/open.js', 'src/model.js', 'plugin.json']) {
+    hash.update(name).update(fs.readFileSync(path.join(pluginRoot, name)));
   }
   const identity = { service: 'dotcanvas', protocol: 1, root: paperRoot, canvasPath,
-    version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.codex-plugin/plugin.json'))).version,
+    version: JSON.parse(fs.readFileSync(path.join(pluginRoot, 'plugin.json'))).version,
     build: hash.digest('hex'), pid: process.pid };
   let initialized = false;
 

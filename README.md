@@ -6,13 +6,19 @@ In Codex, say **“open DotCanvas”** or **“open canvas.”** The [skill](ski
 
 ## Contents
 
-- `.codex-plugin/plugin.json` — plugin metadata.
+- `plugin.json` — canonical Agent Plugins 1.0 metadata, with OpenAI presentation under `extensions.com.openai`.
+- `.codex-plugin/plugin.json` — synchronized compatibility metadata and skill discovery for older Codex clients.
 - `skills/dotcanvas/SKILL.md` — Codex launch and filesystem bridge contract.
+- `assets/` — shared plugin and panel icon.
 - `panel/` — bundled static panel (`index.html`, `styles.css`, `app.js`).
 - `scripts/serve.js` — localhost panel and atomic `.canvas` file bridge.
 - `scripts/open.js` — bounded startup, repo/build verification, and server reuse.
 - `src/model.js` — validation, seed, and serialization helpers.
 - `tests/model.test.js` — model tests.
+
+This layout follows the [OpenAI plugin package format](https://developers.openai.com/plugins/build/plugins). Portable clients discover `skills/` at its fixed root location; the root manifest has no component path overrides. DotCanvas runs its local HTTP bridge through the skill, so it has no MCP server configuration. The launcher requires Node.js and local process access; ChatGPT web/mobile execution is unverified.
+
+Treat root `plugin.json` as the source of identity, version, and presentation. When editing it, keep those values synchronized in the Codex compatibility manifest, and keep the release version in `package.json` and `package-lock.json` aligned. Plugin starter prompts retain their array format and order. The server reads the root manifest for its version and build hash; the compatibility manifest is not required to run the editor.
 
 ## Development
 

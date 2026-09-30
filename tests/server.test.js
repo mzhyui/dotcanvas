@@ -43,5 +43,11 @@ test('local bridge loads, validates, and atomically saves a canvas', async t => 
   assert.equal((await fetch(base + '/app.js')).status, 200);
   assert.equal((await fetch(base + '/geometry.js')).status, 200);
   assert.equal((await fetch(base + '/vendor/markdown-it.min.js')).status, 200);
+  const icon = await fetch(base + '/assets/icon.svg');
+  assert.equal(icon.status, 200);
+  assert.equal(icon.headers.get('content-type'), 'image/svg+xml');
+  const expectedIcon = await fs.readFile(path.resolve(__dirname, '../assets/icon.svg'), 'utf8');
+  assert.equal(await icon.text(), expectedIcon);
+  assert.equal(await (await fetch(base + '/icon.svg')).text(), expectedIcon);
   assert.equal((await fetch(base + '/../src/model.js')).status, 404);
 });
