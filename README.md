@@ -4,8 +4,21 @@ DotCanvas is a self-contained Codex plugin for planning a paper as connected car
 
 In Codex, say **“open DotCanvas”** or **“open canvas.”** The [skill](skills/dotcanvas/SKILL.md) instructs Codex to immediately start or reuse the webserver, then call `open_in_codex` to show its URL in the current chat's right panel. A successful launch proceeds directly to opening; extra diagnostics run only for a failure or an explicit request. If the app queues the tab, Codex reports that status and returns promptly.
 
+## Install from the repository
+
+In **Add plugin marketplace**, use these values:
+
+- **Source:** `mzhyui/dotcanvas` or `https://github.com/mzhyui/dotcanvas.git`.
+- **Git ref:** `master` (or another ref containing the marketplace manifest).
+- **Sparse paths:** leave blank to include the complete plugin.
+
+Add the marketplace, then install **DotCanvas** from its plugin list. The selected Git ref must contain `.agents/plugins/marketplace.json`; local changes become available to GitHub installs after they are committed and pushed. For a local-folder source, select the repository root on the same machine as Codex.
+
+The [marketplace catalog](.agents/plugins/marketplace.json) lists this repository's root as the plugin source (`./`). A marketplace catalog is required by the marketplace-add flow in addition to the plugin's own manifest. If it reports “marketplace root does not contain a supported manifest,” check that the selected ref includes the catalog and that sparse paths did not exclude it. This setup follows the [official OpenAI marketplace documentation](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
+
 ## Contents
 
+- `.agents/plugins/marketplace.json` — repository marketplace catalog for GitHub, Git URL, and local-folder installation.
 - `plugin.json` — canonical Agent Plugins 1.0 metadata, with OpenAI presentation under `extensions.com.openai`.
 - `.codex-plugin/plugin.json` — synchronized compatibility metadata and skill discovery for older Codex clients.
 - `skills/dotcanvas/SKILL.md` — Codex launch and filesystem bridge contract.
